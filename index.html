@@ -104,14 +104,27 @@ function seed(){
   const now=new Date();
   const key=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   const items={}; ALL.forEach(n=>items[n]={valor:0,pago:false});
-  const months=[{label:MES[now.getMonth()]+' '+now.getFullYear(),key,salario:0,extras:[],items}];
+  const months=[{label:MES[now.getMonth()]+' '+now.getFullYear(),key,salario:0,extras:[],items,fixas:FIXAS.slice(),cartoes:CARTOES.slice()}];
   const casa=[];
   return {months,casa,meta:{}};
 }
 
 const S={ data:null, tab:'painel', sel:0, metaDraft:'' };
 
-function loadLocal(){ try{const raw=localStorage.getItem(KEY); if(raw)return JSON.parse(raw);}catch(e){} return seed(); }
+function ensureShape(d){
+  if(!d||!d.months) return seed();
+  d.months.forEach(m=>{
+    if(!Array.isArray(m.fixas)) m.fixas=FIXAS.slice();
+    if(!Array.isArray(m.cartoes)) m.cartoes=CARTOES.slice();
+    if(!m.items) m.items={};
+    m.fixas.concat(m.cartoes).forEach(n=>{ if(!m.items[n]) m.items[n]={valor:0,pago:false}; });
+    if(!Array.isArray(m.extras)) m.extras=[];
+  });
+  if(!Array.isArray(d.casa)) d.casa=[];
+  if(!d.meta) d.meta={};
+  return d;
+}
+function loadLocal(){ try{const raw=localStorage.getItem(KEY); if(raw)return ensureShape(JSON.parse(raw));}catch(e){} return ensureShape(seed()); }
 function saveLocal(){ try{localStorage.setItem(KEY,JSON.stringify(S.data));}catch(e){} }
 function persist(){ saveLocal(); schedulePush(); }
 function update(fn){ fn(S.data); persist(); render(); }
@@ -126,8 +139,8 @@ function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,
 
 function totals(m){
   let fixas=0,cartoes=0,pago=0,pend=0;
-  FIXAS.forEach(n=>{const it=m.items[n]||{valor:0};fixas+=it.valor;if(it.valor>0){if(it.pago)pago+=it.valor;else pend+=it.valor;}});
-  CARTOES.forEach(n=>{const it=m.items[n]||{valor:0};cartoes+=it.valor;if(it.valor>0){if(it.pago)pago+=it.valor;else pend+=it.valor;}});
+  (m.fixas||[]).forEach(n=>{const it=m.items[n]||{valor:0};fixas+=it.valor;if(it.valor>0){if(it.pago)pago+=it.valor;else pend+=it.valor;}});
+  (m.cartoes||[]).forEach(n=>{const it=m.items[n]||{valor:0};cartoes+=it.valor;if(it.valor>0){if(it.pago)pago+=it.valor;else pend+=it.valor;}});
   const extrasRec=(m.extras||[]).filter(e=>e.recebido).reduce((s,e)=>s+(e.valor||0),0);
   const gasto=fixas+cartoes; const renda=(m.salario||0)+extrasRec;
   return {fixas,cartoes,gasto,renda,extrasRec,pago,pend,sobra:renda-gasto};
@@ -215,10 +228,11 @@ function viewPainel(d,m,t,months){
   if(prev){const dg=t.gasto-prev.gasto,ds=t.sobra-prev.sobra;
     deltaG=(dg>=0?'+':'−')+fmt(Math.abs(dg)).slice(3)+' vs mês anterior';
     deltaS=(ds>=0?'▲ ':'▼ ')+fmt(Math.abs(ds)).slice(3)+' vs mês anterior';}
-  const gastoArr=ALL.map(n=>({nome:n,valor:(m.items[n]||{valor:0}).valor,cor:CARTOES.indexOf(n)>=0?'#80a2ff':'#25399e'})).filter(x=>x.valor>0).sort((a,b)=>b.valor-a.valor);
+  const acct=(m.fixas||[]).concat(m.cartoes||[]);
+  const gastoArr=acct.map(n=>({nome:n,valor:(m.items[n]||{valor:0}).valor,cor:(m.cartoes||[]).indexOf(n)>=0?'#80a2ff':'#25399e'})).filter(x=>x.valor>0).sort((a,b)=>b.valor-a.valor);
   const maxG=gastoArr.length?gastoArr[0].valor:1;
   const top=gastoArr.slice(0,6);
-  const pend=ALL.map(n=>({nome:n,it:m.items[n]||{valor:0,pago:false}})).filter(x=>x.it.valor>0&&!x.it.pago);
+  const pend=acct.map(n=>({nome:n,it:m.items[n]||{valor:0,pago:false}})).filter(x=>x.it.valor>0&&!x.it.pago);
   const meta=(d.meta&&d.meta[m.key])||null;
   let metaHtml='';
   if(meta){const mp=meta>0?t.gasto/meta:0; const c=mp>1?'#e53a2e':(mp>0.85?'#ffd000':'#66bb56');
@@ -267,10 +281,11 @@ function viewPainel(d,m,t,months){
 }
 
 function viewLanc(d,m,t){
-  const rowsHtml=(list)=>list.map(n=>{const it=m.items[n]||{valor:0,pago:false};
+  const rowsHtml=(list,tipo)=>list.map(n=>{const it=m.items[n]||{valor:0,pago:false};
     return `<div class="rowline"><span style="font-weight:600;font-size:14px;flex:1;">${esc(n)}</span>
-      <div style="display:flex;align-items:center;gap:6px;"><span style="color:#8c8e90;font-size:13px;">R$</span><input class="num" type="number" step="0.01" value="${esc(inp(it.valor))}" placeholder="0,00" onchange="setVal('${esc(n)}',this.value)"></div>
-      <button class="toggle" style="background:${it.pago?'#e8f7e5':'#ffebe8'};color:${it.pago?'#1a7500':'#b00512'};" onclick="togVal('${esc(n)}')">${it.pago?'Pago':'A pagar'}</button></div>`;}).join('');
+      <div style="display:flex;align-items:center;gap:6px;"><span style="color:#8c8e90;font-size:13px;">R$</span><input class="num" type="number" step="0.01" value="${esc(inp(it.valor))}" placeholder="0,00" onchange="setVal('${js(n)}',this.value)"></div>
+      <button class="toggle" style="background:${it.pago?'#e8f7e5':'#ffebe8'};color:${it.pago?'#1a7500':'#b00512'};" onclick="togVal('${js(n)}')">${it.pago?'Pago':'A pagar'}</button>
+      <button title="Remover" style="border:none;cursor:pointer;background:#faf9f8;border-radius:6px;width:34px;height:34px;color:#c0392b;flex-shrink:0;" onclick="delConta('${tipo}','${js(n)}')"><span class="ms" style="font-size:18px">delete</span></button></div>`;}).join('');
   const extras=(m.extras||[]).map((e,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
       <input type="text" value="${esc(e.desc)}" placeholder="Descrição" style="flex:1;border:1px solid #d4deff;border-radius:6px;padding:8px 10px;font-family:Manrope;font-size:13px;" onchange="setExtraDesc(${i},this.value)">
       <input type="number" step="0.01" value="${esc(inp(e.valor))}" placeholder="0,00" style="width:100px;text-align:right;border:1px solid #d4deff;border-radius:6px;padding:8px 10px;font-family:Manrope;font-size:13px;" onchange="setExtraVal(${i},this.value)">
@@ -283,8 +298,10 @@ function viewLanc(d,m,t){
         <div style="margin-top:14px;"><div class="lbl" style="margin-bottom:8px;">Extras / renda avulsa</div>${extras}
           <button class="btnghost" style="margin-top:8px;border-style:dashed;border-color:#80a2ff;" onclick="addExtra()"><span class="ms" style="font-size:18px">add</span> Adicionar extra</button></div>
       </div>
-      <div class="card" style="padding:22px;"><h3 class="h3"><span class="ms" style="font-size:20px;color:#25399e">receipt_long</span>Contas fixas</h3>${rowsHtml(FIXAS)}</div>
-      <div class="card" style="padding:22px;"><h3 class="h3"><span class="ms" style="font-size:20px;color:#25399e">credit_card</span>Cartões</h3>${rowsHtml(CARTOES)}</div>
+      <div class="card" style="padding:22px;"><h3 class="h3"><span class="ms" style="font-size:20px;color:#25399e">receipt_long</span>Contas fixas</h3>${rowsHtml(m.fixas||[],'fixa')}
+        <button class="btnghost" style="margin-top:10px;border-style:dashed;border-color:#80a2ff;" onclick="addConta('fixa')"><span class="ms" style="font-size:18px">add</span> Adicionar conta fixa</button></div>
+      <div class="card" style="padding:22px;"><h3 class="h3"><span class="ms" style="font-size:20px;color:#25399e">credit_card</span>Cartões</h3>${rowsHtml(m.cartoes||[],'cartao')}
+        <button class="btnghost" style="margin-top:10px;border-style:dashed;border-color:#80a2ff;" onclick="addConta('cartao')"><span class="ms" style="font-size:18px">add</span> Adicionar cartão</button></div>
     </div>
     <div class="card" style="position:sticky;top:96px;display:flex;flex-direction:column;gap:14px;padding:22px;">
       <div class="lbl">Resumo · ${esc(m.label)}</div>
@@ -363,13 +380,33 @@ function setExtraVal(i,v){ updateMonth(m=>{m.extras[i].valor=parseNum(v);}); }
 function togExtra(i){ updateMonth(m=>{m.extras[i].recebido=!m.extras[i].recebido;}); }
 function rmExtra(i){ updateMonth(m=>{m.extras.splice(i,1);}); }
 function togCasa(i){ update(d=>{d.casa[i].comprado=!d.casa[i].comprado;}); }
+function js(s){ return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+function addConta(tipo){
+  const nome=(prompt(tipo==='fixa'?'Nome da nova conta fixa:':'Nome do novo cartão:')||'').trim();
+  if(!nome) return;
+  updateMonth(m=>{
+    if(tipo==='fixa'){ if(!m.fixas)m.fixas=[]; if(m.fixas.indexOf(nome)<0)m.fixas.push(nome); }
+    else { if(!m.cartoes)m.cartoes=[]; if(m.cartoes.indexOf(nome)<0)m.cartoes.push(nome); }
+    if(!m.items[nome]) m.items[nome]={valor:0,pago:false};
+  });
+}
+function delConta(tipo,nome){
+  if(!confirm('Remover "'+nome+'" deste mês? O histórico dos outros meses não muda.')) return;
+  updateMonth(m=>{
+    const arr = tipo==='fixa' ? (m.fixas||[]) : (m.cartoes||[]);
+    const i=arr.indexOf(nome); if(i>=0) arr.splice(i,1);
+    if(m.items[nome]) delete m.items[nome];
+  });
+}
 function saveMeta(){ const el=document.getElementById('metaInput'); const val=parseNum(el?el.value:S.metaDraft); if(val>0){ const k=S.data.months[S.sel].key; update(d=>{ if(!d.meta)d.meta={}; d.meta[k]=val; }); S.metaDraft=''; } }
 function clearMeta(){ const k=S.data.months[S.sel].key; update(d=>{ if(d.meta) delete d.meta[k]; }); }
 function addMonth(){
   const months=S.data.months; const last=months[months.length-1];
   const [y,mo]=last.key.split('-').map(Number); let ny=y,nm=mo+1; if(nm>12){nm=1;ny++;}
-  const key=ny+'-'+String(nm).padStart(2,'0'); const items={}; ALL.forEach(n=>items[n]={valor:0,pago:false});
-  update(d=>d.months.push({label:MES[nm-1]+' '+ny,key,salario:0,extras:[],items}));
+  const key=ny+'-'+String(nm).padStart(2,'0');
+  const fx=(last.fixas||FIXAS).slice(), ct=(last.cartoes||CARTOES).slice();
+  const items={}; fx.concat(ct).forEach(n=>items[n]={valor:0,pago:false});
+  update(d=>d.months.push({label:MES[nm-1]+' '+ny,key,salario:0,extras:[],items,fixas:fx,cartoes:ct}));
   S.sel=months.length-1; S.tab='lancamentos'; render();
 }
 
@@ -395,7 +432,7 @@ async function pullNow(fromSave){
     const r=await fetch(syncUrl+'?token='+encodeURIComponent(syncToken)+'&t='+Date.now());
     const j=await r.json();
     if(j.error){ setStatus('err'); msg('Erro: '+j.error,'#b00512'); return; }
-    if(j.data && j.data.months){ S.data=j.data; S.sel=S.data.months.length-1; saveLocal(); setStatus('ok'); render();
+    if(j.data && j.data.months){ S.data=ensureShape(j.data); S.sel=S.data.months.length-1; saveLocal(); setStatus('ok'); render();
       msg(fromSave?'Conectado! Dados sincronizados.':'Dados baixados da nuvem.', '#1a7500'); }
     else { render(); await pushNow(true); msg('Conectado! Estes dados foram enviados para a nuvem.', '#1a7500'); }
   }catch(e){ setStatus('err'); msg('Falha ao conectar. Verifique o link e a implantação (acesso: Qualquer pessoa).','#b00512'); }
@@ -421,9 +458,6 @@ function schedulePush(){
   }, 1200);
 }
 
-/* ============================================================
-   BOOT
-   ============================================================ */
 async function boot(){
   S.data=loadLocal();
   S.sel=S.data.months.length-1;
@@ -433,8 +467,8 @@ async function boot(){
       setStatus('sync');
       const r=await fetch(syncUrl+'?token='+encodeURIComponent(syncToken)+'&t='+Date.now());
       const j=await r.json();
-      if(!j.error && j.data && j.data.months){ S.data=j.data; S.sel=S.data.months.length-1; saveLocal(); setStatus('ok'); render(); }
-      else if(!j.error){ setStatus('ok'); pushNow(true); } // nuvem vazia: envia os dados locais
+      if(!j.error && j.data && j.data.months){ S.data=ensureShape(j.data); S.sel=S.data.months.length-1; saveLocal(); setStatus('ok'); render(); }
+      else if(!j.error){ setStatus('ok'); pushNow(true); }
       else setStatus('err');
     }catch(e){ setStatus('err'); }
   }
