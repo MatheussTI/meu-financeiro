@@ -287,7 +287,7 @@ function viewPainel(d,m,t,months){
       <button class="toggle" style="margin-top:12px;background:transparent;border:1px solid rgba(255,255,255,.25);color:#a4bfff;" onclick="clearMeta()">Alterar meta</button></div>`;
   } else {
     metaHtml=`<div><div style="font-size:13px;color:#a4bfff;margin-bottom:10px;">Defina um limite de gastos para acompanhar o mês.</div>
-      <div style="display:flex;gap:8px;"><input type="number" id="metaInput" value="${esc(S.metaDraft)}" placeholder="Ex: 3000" style="flex:1;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;border-radius:6px;padding:9px 12px;font-family:Manrope;font-size:14px;">
+      <div style="display:flex;gap:8px;"><input type="text" inputmode="decimal" id="metaInput" value="${esc(S.metaDraft)}" placeholder="Ex: 3.000,00" style="flex:1;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;border-radius:6px;padding:9px 12px;font-family:Manrope;font-size:14px;" oninput="maskMoney(this)">
       <button class="btnprimary" style="background:#e53a2e;" onclick="saveMeta()">Definir</button></div></div>`;
   }
   return `
@@ -328,19 +328,19 @@ function viewPainel(d,m,t,months){
 function viewLanc(d,m,t){
   const rowsHtml=(list,tipo)=>list.map(n=>{const it=m.items[n]||{valor:0,pago:false};
     return `<div class="rowline"><span style="font-weight:600;font-size:14px;flex:1;">${esc(n)}</span>
-      <div style="display:flex;align-items:center;gap:6px;"><span style="color:#8c8e90;font-size:13px;">R$</span><input class="num" type="number" step="0.01" value="${esc(inp(it.valor))}" placeholder="0,00" onchange="setVal('${js(n)}',this.value)"></div>
+      <div style="display:flex;align-items:center;gap:6px;"><span style="color:#8c8e90;font-size:13px;">R$</span><input class="num" type="text" inputmode="decimal" value="${it.valor?moneyIn(it.valor):''}" placeholder="0,00" oninput="maskMoney(this)" onchange="setVal('${js(n)}',this.value)"></div>
       <button class="toggle" style="background:${it.pago?'#e8f7e5':'#ffebe8'};color:${it.pago?'#1a7500':'#b00512'};" onclick="togVal('${js(n)}')">${it.pago?'Pago':'A pagar'}</button>
       <button title="Renomear" style="border:none;cursor:pointer;background:#faf9f8;border-radius:6px;width:34px;height:34px;color:#25399e;flex-shrink:0;" onclick="renameConta('${tipo}','${js(n)}')"><span class="ms" style="font-size:17px">edit</span></button>
       <button title="Remover" style="border:none;cursor:pointer;background:#faf9f8;border-radius:6px;width:34px;height:34px;color:#c0392b;flex-shrink:0;" onclick="delConta('${tipo}','${js(n)}')"><span class="ms" style="font-size:18px">delete</span></button></div>`;}).join('');
   const extras=(m.extras||[]).map((e,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
       <input type="text" value="${esc(e.desc)}" placeholder="Descrição" style="flex:1;border:1px solid #d4deff;border-radius:6px;padding:8px 10px;font-family:Manrope;font-size:13px;" onchange="setExtraDesc(${i},this.value)">
-      <input type="number" step="0.01" value="${esc(inp(e.valor))}" placeholder="0,00" style="width:100px;text-align:right;border:1px solid #d4deff;border-radius:6px;padding:8px 10px;font-family:Manrope;font-size:13px;" onchange="setExtraVal(${i},this.value)">
+      <input type="text" inputmode="decimal" value="${e.valor?moneyIn(e.valor):''}" placeholder="0,00" style="width:100px;text-align:right;border:1px solid #d4deff;border-radius:6px;padding:8px 10px;font-family:Manrope;font-size:13px;" oninput="maskMoney(this)" onchange="setExtraVal(${i},this.value)">
       <button class="toggle" style="min-width:auto;background:${e.recebido?'#e8f7e5':'#fff4bb'};color:${e.recebido?'#1a7500':'#967200'};white-space:nowrap;" onclick="togExtra(${i})">${e.recebido?'Recebido':'A receber'}</button>
       <button style="border:none;cursor:pointer;background:#faf9f8;border-radius:6px;width:34px;height:34px;color:#8c8e90;" onclick="rmExtra(${i})"><span class="ms" style="font-size:18px">delete</span></button></div>`).join('');
   return `<div class="lanc-grid" style="display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start;">
     <div style="display:flex;flex-direction:column;gap:16px;">
       <div class="card" style="padding:22px;"><h3 class="h3"><span class="ms" style="font-size:20px;color:#2c8319">trending_up</span>Renda</h3>
-        <div class="rowline"><span style="font-weight:600;font-size:14px;">Salário</span><div style="display:flex;align-items:center;gap:6px;"><span style="color:#8c8e90;font-size:13px;">R$</span><input class="num" style="width:130px;" type="number" step="0.01" value="${esc(inp(m.salario))}" onchange="setSalario(this.value)"></div></div>
+        <div class="rowline"><span style="font-weight:600;font-size:14px;">Salário</span><div style="display:flex;align-items:center;gap:6px;"><span style="color:#8c8e90;font-size:13px;">R$</span><input class="num" style="width:130px;" type="text" inputmode="decimal" value="${m.salario?moneyIn(m.salario):''}" placeholder="0,00" oninput="maskMoney(this)" onchange="setSalario(this.value)"></div></div>
         <div style="margin-top:14px;"><div class="lbl" style="margin-bottom:8px;">Extras / renda avulsa</div>${extras}
           <button class="btnghost" style="margin-top:8px;border-style:dashed;border-color:#80a2ff;" onclick="addExtra()"><span class="ms" style="font-size:18px">add</span> Adicionar extra</button></div>
       </div>
