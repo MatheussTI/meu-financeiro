@@ -82,6 +82,41 @@
   </div>
 </div>
 
+<div class="modalwrap" id="casaModal">
+  <div class="modal">
+    <h3 id="casaModalTitle" style="margin:0 0 12px;font-size:17px;font-weight:800;">Novo item</h3>
+    <label style="font-size:12px;font-weight:700;color:#8c8e90;text-transform:uppercase;letter-spacing:.04em;">Nome</label>
+    <input class="field" id="casaNome" placeholder="Ex: Micro-ondas">
+    <label style="font-size:12px;font-weight:700;color:#8c8e90;text-transform:uppercase;letter-spacing:.04em;display:block;margin-top:12px;">Prioridade</label>
+    <select class="field" id="casaEss">
+      <option value="ess">Essencial</option>
+      <option value="nao">Não essencial</option>
+    </select>
+    <label style="font-size:12px;font-weight:700;color:#8c8e90;text-transform:uppercase;letter-spacing:.04em;display:block;margin-top:12px;">Forma de pagamento</label>
+    <select class="field" id="casaPag" onchange="casaPagChange()">
+      <option value="avista">À vista</option>
+      <option value="parcelado">Parcelado</option>
+    </select>
+    <div id="casaAvistaBox">
+      <label style="font-size:12px;font-weight:700;color:#8c8e90;text-transform:uppercase;letter-spacing:.04em;display:block;margin-top:12px;">Valor total (R$)</label>
+      <input class="field" id="casaValor" type="number" step="0.01" placeholder="0,00">
+    </div>
+    <div id="casaParcBox" style="display:none;">
+      <div style="display:flex;gap:10px;margin-top:12px;">
+        <div style="flex:1;"><label style="font-size:12px;font-weight:700;color:#8c8e90;text-transform:uppercase;letter-spacing:.04em;">Valor da parcela</label><input class="field" id="casaParcela" type="number" step="0.01" placeholder="0,00"></div>
+        <div style="width:120px;"><label style="font-size:12px;font-weight:700;color:#8c8e90;text-transform:uppercase;letter-spacing:.04em;">Nº parcelas</label><input class="field" id="casaQtd" type="number" value="12"></div>
+      </div>
+      <div id="casaParcHint" style="font-size:12px;color:#8c8e90;margin-top:8px;"></div>
+    </div>
+    <label style="font-size:12px;font-weight:700;color:#8c8e90;text-transform:uppercase;letter-spacing:.04em;display:block;margin-top:12px;">Link (opcional)</label>
+    <input class="field" id="casaLink" placeholder="https://...">
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+      <button class="btnghost" onclick="closeCasaModal()">Cancelar</button>
+      <button class="btnprimary" onclick="saveCasaModal()">Adicionar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ============================================================
    FINANÇAS — app pessoal, arquivo único.
@@ -285,6 +320,7 @@ function viewLanc(d,m,t){
     return `<div class="rowline"><span style="font-weight:600;font-size:14px;flex:1;">${esc(n)}</span>
       <div style="display:flex;align-items:center;gap:6px;"><span style="color:#8c8e90;font-size:13px;">R$</span><input class="num" type="number" step="0.01" value="${esc(inp(it.valor))}" placeholder="0,00" onchange="setVal('${js(n)}',this.value)"></div>
       <button class="toggle" style="background:${it.pago?'#e8f7e5':'#ffebe8'};color:${it.pago?'#1a7500':'#b00512'};" onclick="togVal('${js(n)}')">${it.pago?'Pago':'A pagar'}</button>
+      <button title="Renomear" style="border:none;cursor:pointer;background:#faf9f8;border-radius:6px;width:34px;height:34px;color:#25399e;flex-shrink:0;" onclick="renameConta('${tipo}','${js(n)}')"><span class="ms" style="font-size:17px">edit</span></button>
       <button title="Remover" style="border:none;cursor:pointer;background:#faf9f8;border-radius:6px;width:34px;height:34px;color:#c0392b;flex-shrink:0;" onclick="delConta('${tipo}','${js(n)}')"><span class="ms" style="font-size:18px">delete</span></button></div>`;}).join('');
   const extras=(m.extras||[]).map((e,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
       <input type="text" value="${esc(e.desc)}" placeholder="Descrição" style="flex:1;border:1px solid #d4deff;border-radius:6px;padding:8px 10px;font-family:Manrope;font-size:13px;" onchange="setExtraDesc(${i},this.value)">
@@ -318,8 +354,8 @@ function viewLanc(d,m,t){
 
 function viewHist(d,months){
   const rows=months.map((mm,i)=>{const tt=totals(mm);const p=tt.renda>0?tt.gasto/tt.renda:0;
-    return `<div onclick="selMonth(${i})" style="display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr 1fr;gap:8px;padding:12px 0;border-bottom:1px solid #f4f6fb;font-size:14px;cursor:pointer;background:${i===S.sel?'#f6f9ff':'transparent'};">
-      <span style="font-weight:600;">${esc(mm.label)}</span><span style="text-align:right;color:#636466;">${fmt(tt.renda)}</span><span style="text-align:right;color:#636466;">${fmt(tt.gasto)}</span><span style="text-align:right;font-weight:700;color:${tt.sobra>=0?'#2c8319':'#dc2626'};">${fmt(tt.sobra)}</span><span style="text-align:right;color:#636466;">${Math.round(p*100)}%</span></div>`;}).join('');
+    return `<div onclick="selMonth(${i})" style="display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr 1fr 34px;gap:8px;padding:12px 0;border-bottom:1px solid #f4f6fb;font-size:14px;cursor:pointer;background:${i===S.sel?'#f6f9ff':'transparent'};">
+      <span style="font-weight:600;">${esc(mm.label)}</span><span style="text-align:right;color:#636466;">${fmt(tt.renda)}</span><span style="text-align:right;color:#636466;">${fmt(tt.gasto)}</span><span style="text-align:right;font-weight:700;color:${tt.sobra>=0?'#2c8319':'#dc2626'};">${fmt(tt.sobra)}</span><span style="text-align:right;color:#636466;">${Math.round(p*100)}%</span><button title="Excluir mês" onclick="event.stopPropagation();delMonth(${i})" style="border:none;background:transparent;cursor:pointer;color:#c0392b;justify-self:end;padding:0;"><span class="ms" style="font-size:17px">delete</span></button></div>`;}).join('');
   const acc=months.reduce((s,mm)=>{const tt=totals(mm);s.r+=tt.renda;s.g+=tt.gasto;s.s+=tt.sobra;return s;},{r:0,g:0,s:0});
   return `<div style="display:flex;flex-direction:column;gap:16px;">
     <div class="card" style="padding:22px;">
@@ -331,9 +367,9 @@ function viewHist(d,months){
       </div>${chartSVG(months)}
     </div>
     <div class="card" style="padding:8px 22px 22px;">
-      <div style="display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr 1fr;gap:8px;padding:14px 0 10px;border-bottom:1px solid #eff0f2;font-size:11px;color:#8c8e90;font-weight:700;text-transform:uppercase;letter-spacing:.04em;"><span>Mês</span><span style="text-align:right;">Renda</span><span style="text-align:right;">Gasto</span><span style="text-align:right;">Sobra</span><span style="text-align:right;">% comprom.</span></div>
+      <div style="display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr 1fr 34px;gap:8px;padding:14px 0 10px;border-bottom:1px solid #eff0f2;font-size:11px;color:#8c8e90;font-weight:700;text-transform:uppercase;letter-spacing:.04em;"><span>Mês</span><span style="text-align:right;">Renda</span><span style="text-align:right;">Gasto</span><span style="text-align:right;">Sobra</span><span style="text-align:right;">% comprom.</span><span></span></div>
       ${rows}
-      <div style="display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr 1fr;gap:8px;padding:14px 0 4px;font-size:14px;font-weight:700;"><span>Acumulado</span><span style="text-align:right;">${fmt(acc.r)}</span><span style="text-align:right;">${fmt(acc.g)}</span><span style="text-align:right;color:${acc.s>=0?'#2c8319':'#dc2626'};">${fmt(acc.s)}</span><span style="text-align:right;color:#8c8e90;">${acc.r>0?Math.round(acc.g/acc.r*100):0}%</span></div>
+      <div style="display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr 1fr 34px;gap:8px;padding:14px 0 4px;font-size:14px;font-weight:700;"><span>Acumulado</span><span style="text-align:right;">${fmt(acc.r)}</span><span style="text-align:right;">${fmt(acc.g)}</span><span style="text-align:right;color:${acc.s>=0?'#2c8319':'#dc2626'};">${fmt(acc.s)}</span><span style="text-align:right;color:#8c8e90;">${acc.r>0?Math.round(acc.g/acc.r*100):0}%</span><span></span></div>
     </div>
   </div>`;
 }
@@ -344,23 +380,29 @@ function viewCasa(d){
   const parcelas=d.casa.filter(c=>c.comprado&&c.parcela>0).reduce((s,c)=>s+c.parcela,0);
   const comprado=d.casa.filter(c=>c.comprado).reduce((s,c)=>s+c.valor,0);
   const compradoCount=d.casa.filter(c=>c.comprado).length;
+  const parcSum=(ess)=>d.casa.filter(c=>c.ess===ess&&c.parcela>0).reduce((sm,c)=>sm+c.parcela,0);
+  const totalLine=(ess)=>{const v=parcSum(ess); return v>0?`<div style="display:flex;justify-content:space-between;border-top:1px solid #eff0f2;margin-top:8px;padding-top:12px;font-size:14px;"><span style="font-weight:700;">Total das parcelas / mês</span><span style="font-weight:700;color:#15274a;">${fmt(v)}</span></div>`:'';};
   const rowsFor=(ess)=>d.casa.map((c,i)=>({c,i})).filter(x=>x.c.ess===ess).map(({c,i})=>{
     const parcelaFmt=c.parcela>0?(fmt(c.parcela)+' × '+c.qtd):(c.valor>0?'À vista':'—');
     const link=c.link?`<a href="${esc(c.link)}" target="_blank" rel="noopener" style="font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:3px;">link<span class="ms" style="font-size:15px">open_in_new</span></a>`:'<span style="color:#cdcfd2;font-size:13px;">—</span>';
-    return `<div style="display:grid;grid-template-columns:26px 1.6fr 1fr 1fr 96px;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid #f4f6fb;">
+    return `<div style="display:grid;grid-template-columns:26px 1.5fr 1fr 1fr 52px 30px 30px;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid #f4f6fb;">
       <button style="border:none;cursor:pointer;background:transparent;padding:0;display:flex;" onclick="togCasa(${i})"><span class="ms" style="font-size:22px;color:${c.comprado?'#2c8319':'#cdcfd2'}">${c.comprado?'check_circle':'radio_button_unchecked'}</span></button>
       <span style="font-weight:600;font-size:14px;color:${c.comprado?'#8c8e90':'#1e2022'};text-decoration:${c.comprado?'line-through':'none'};">${esc(c.nome)}</span>
       <span style="font-size:13px;color:#636466;">${c.valor>0?fmt(c.valor):'—'}</span>
       <span style="font-size:13px;color:#636466;">${parcelaFmt}</span>
-      <span style="text-align:right;">${link}</span></div>`;}).join('');
+      <span style="text-align:right;">${link}</span>
+      <button title="Editar" style="border:none;cursor:pointer;background:#faf9f8;border-radius:6px;width:30px;height:30px;color:#25399e;" onclick="openCasaEdit(${i})"><span class="ms" style="font-size:16px">edit</span></button>
+      <button title="Remover" style="border:none;cursor:pointer;background:#faf9f8;border-radius:6px;width:30px;height:30px;color:#c0392b;" onclick="delCasaItem(${i})"><span class="ms" style="font-size:16px">delete</span></button></div>`;}).join('');
   return `<div style="display:flex;flex-direction:column;gap:16px;">
     <div class="kpi-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));">
       <div class="card"><div class="lbl">Falta comprar</div><div class="big" style="font-size:24px;">${fmt(restante)}</div><div class="sub">${restanteCount} itens pendentes</div></div>
       <div class="card"><div class="lbl">Parcelas ativas / mês</div><div class="big" style="font-size:24px;">${fmt(parcelas)}</div><div class="sub">de itens já comprados</div></div>
       <div class="card"><div class="lbl">Já investido</div><div class="big" style="font-size:24px;color:#2c8319;">${fmt(comprado)}</div><div class="sub">${compradoCount} itens comprados</div></div>
     </div>
-    <div class="card" style="padding:22px;"><h3 class="h3"><span class="ms" style="font-size:20px;color:#25399e">chair</span>Itens essenciais</h3>${rowsFor(true)}</div>
-    <div class="card" style="padding:22px;"><h3 class="h3"><span class="ms" style="font-size:20px;color:#8c8e90">weekend</span>Itens não essenciais</h3>${rowsFor(false)}</div>
+    <div class="card" style="padding:22px;"><h3 class="h3"><span class="ms" style="font-size:20px;color:#25399e">chair</span>Itens essenciais</h3>${rowsFor(true)}${totalLine(true)}
+      <button class="btnghost" style="margin-top:12px;border-style:dashed;border-color:#80a2ff;" onclick="openCasaModal(true)"><span class="ms" style="font-size:18px">add</span> Adicionar item essencial</button></div>
+    <div class="card" style="padding:22px;"><h3 class="h3"><span class="ms" style="font-size:20px;color:#8c8e90">weekend</span>Itens não essenciais</h3>${rowsFor(false)}${totalLine(false)}
+      <button class="btnghost" style="margin-top:12px;border-style:dashed;border-color:#80a2ff;" onclick="openCasaModal(false)"><span class="ms" style="font-size:18px">add</span> Adicionar item não essencial</button></div>
   </div>`;
 }
 
@@ -380,7 +422,56 @@ function setExtraVal(i,v){ updateMonth(m=>{m.extras[i].valor=parseNum(v);}); }
 function togExtra(i){ updateMonth(m=>{m.extras[i].recebido=!m.extras[i].recebido;}); }
 function rmExtra(i){ updateMonth(m=>{m.extras.splice(i,1);}); }
 function togCasa(i){ update(d=>{d.casa[i].comprado=!d.casa[i].comprado;}); }
+let casaModalEss=true, casaEditIdx=null;
+function fillCasaModal(ess,item){
+  casaModalEss=ess;
+  document.getElementById('casaEss').value = ess?'ess':'nao';
+  document.getElementById('casaNome').value = item?item.nome:'';
+  const parc = !!(item && item.parcela>0);
+  document.getElementById('casaPag').value = parc?'parcelado':'avista';
+  document.getElementById('casaValor').value = (item && !parc && item.valor)?item.valor:'';
+  document.getElementById('casaParcela').value = (item && parc)?item.parcela:'';
+  document.getElementById('casaQtd').value = (item && parc)?item.qtd:'12';
+  document.getElementById('casaLink').value = item?(item.link||''):'';
+  casaPagChange();
+  document.getElementById('casaModal').style.display='flex';
+}
+function openCasaModal(ess){ casaEditIdx=null; document.getElementById('casaModalTitle').textContent = ess?'Novo item essencial':'Novo item não essencial'; fillCasaModal(ess,null); }
+function openCasaEdit(i){ const c=S.data.casa[i]; if(!c) return; casaEditIdx=i; document.getElementById('casaModalTitle').textContent='Editar item'; fillCasaModal(!!c.ess,c); }
+function closeCasaModal(){ document.getElementById('casaModal').style.display='none'; }
+function casaPagChange(){
+  const p=document.getElementById('casaPag').value;
+  document.getElementById('casaAvistaBox').style.display = p==='avista'?'block':'none';
+  document.getElementById('casaParcBox').style.display = p==='parcelado'?'block':'none';
+}
+function saveCasaModal(){
+  const nome=(document.getElementById('casaNome').value||'').trim();
+  if(!nome){ alert('Dê um nome ao item.'); return; }
+  const ess = document.getElementById('casaEss').value==='ess';
+  const pag=document.getElementById('casaPag').value;
+  const link=(document.getElementById('casaLink').value||'').trim();
+  let valor=0,parcela=0,qtd=1;
+  if(pag==='parcelado'){
+    parcela=parseNum(document.getElementById('casaParcela').value);
+    qtd=parseInt(document.getElementById('casaQtd').value)||1;
+    valor=parcela*qtd;
+  } else {
+    valor=parseNum(document.getElementById('casaValor').value); parcela=0; qtd=1;
+  }
+  update(d=>{ if(!d.casa)d.casa=[]; if(casaEditIdx!=null && d.casa[casaEditIdx]){ d.casa[casaEditIdx]=Object.assign({},d.casa[casaEditIdx],{nome,valor,parcela,qtd,ess,link}); } else { d.casa.push({nome,valor,parcela,qtd,comprado:false,ess,link}); } });
+  closeCasaModal();
+}
+function delCasaItem(i){ if(!confirm('Remover este item da lista?')) return; update(d=>{ d.casa.splice(i,1); }); }
 function js(s){ return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+function renameConta(tipo,nome){
+  const novo=(prompt('Novo nome:',nome)||'').trim();
+  if(!novo||novo===nome) return;
+  updateMonth(m=>{
+    const arr = tipo==='fixa' ? (m.fixas=m.fixas||[]) : (m.cartoes=m.cartoes||[]);
+    const i=arr.indexOf(nome); if(i>=0) arr[i]=novo; else arr.push(novo);
+    if(m.items[nome]){ m.items[novo]=m.items[nome]; delete m.items[nome]; } else if(!m.items[novo]) m.items[novo]={valor:0,pago:false};
+  });
+}
 function addConta(tipo){
   const nome=(prompt(tipo==='fixa'?'Nome da nova conta fixa:':'Nome do novo cartão:')||'').trim();
   if(!nome) return;
@@ -408,6 +499,11 @@ function addMonth(){
   const items={}; fx.concat(ct).forEach(n=>items[n]={valor:0,pago:false});
   update(d=>d.months.push({label:MES[nm-1]+' '+ny,key,salario:0,extras:[],items,fixas:fx,cartoes:ct}));
   S.sel=months.length-1; S.tab='lancamentos'; render();
+}
+function delMonth(i){
+  if(S.data.months.length<=1){ alert('Você precisa manter pelo menos um mês.'); return; }
+  const mm=S.data.months[i]; if(!confirm('Excluir o mês "'+mm.label+'"? Esta ação não pode ser desfeita.')) return;
+  update(d=>{ d.months.splice(i,1); if(d.meta && d.meta[mm.key]) delete d.meta[mm.key]; });
 }
 
 /* ============================================================
