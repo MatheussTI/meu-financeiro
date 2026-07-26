@@ -92,6 +92,14 @@
       <option value="ess">Essencial</option>
       <option value="nao">Não essencial</option>
     </select>
+    <label style="font-size:12px;font-weight:700;color:#8c8e90;text-transform:uppercase;letter-spacing:.04em;display:block;margin-top:12px;">Categoria</label>
+    <select class="field" id="casaCat">
+      <option>Cozinha</option>
+      <option>Quarto e Sala</option>
+      <option>Área de Serviço</option>
+      <option>Banheiro</option>
+      <option>Maiores</option>
+    </select>
     <label style="font-size:12px;font-weight:700;color:#8c8e90;text-transform:uppercase;letter-spacing:.04em;display:block;margin-top:12px;">Forma de pagamento</label>
     <select class="field" id="casaPag" onchange="casaPagChange()">
       <option value="avista">À vista</option>
@@ -374,6 +382,7 @@ function viewHist(d,months){
   </div>`;
 }
 
+function catColor(cat){ const m={'Cozinha':['#fff0e6','#b45309'],'Quarto e Sala':['#eef2ff','#3730a3'],'Área de Serviço':['#ecfdf5','#047857'],'Banheiro':['#e0f2fe','#0369a1'],'Maiores':['#fce7f3','#9d174d']}; const c=m[cat]||['#eff0f2','#636466']; return {bg:c[0],fg:c[1]}; }
 function viewCasa(d){
   const restante=d.casa.filter(c=>!c.comprado).reduce((s,c)=>s+c.valor,0);
   const restanteCount=d.casa.filter(c=>!c.comprado&&c.valor>0).length;
@@ -387,7 +396,7 @@ function viewCasa(d){
     const link=c.link?`<a href="${esc(c.link)}" target="_blank" rel="noopener" style="font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:3px;">link<span class="ms" style="font-size:15px">open_in_new</span></a>`:'<span style="color:#cdcfd2;font-size:13px;">—</span>';
     return `<div style="display:grid;grid-template-columns:26px 1.5fr 1fr 1fr 52px 30px 30px;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid #f4f6fb;">
       <button style="border:none;cursor:pointer;background:transparent;padding:0;display:flex;" onclick="togCasa(${i})"><span class="ms" style="font-size:22px;color:${c.comprado?'#2c8319':'#cdcfd2'}">${c.comprado?'check_circle':'radio_button_unchecked'}</span></button>
-      <span style="font-weight:600;font-size:14px;color:${c.comprado?'#8c8e90':'#1e2022'};text-decoration:${c.comprado?'line-through':'none'};">${esc(c.nome)}</span>
+      <span style="min-width:0;"><span style="font-weight:600;font-size:14px;color:${c.comprado?'#8c8e90':'#1e2022'};text-decoration:${c.comprado?'line-through':'none'};">${esc(c.nome)}</span>${c.cat?`<div style="font-size:10px;font-weight:700;margin-top:3px;color:${catColor(c.cat).fg};background:${catColor(c.cat).bg};padding:1px 8px;border-radius:9999px;display:inline-block;text-transform:uppercase;letter-spacing:.03em;">${esc(c.cat)}</div>`:''}</span>
       <span style="font-size:13px;color:#636466;">${c.valor>0?fmt(c.valor):'—'}</span>
       <span style="font-size:13px;color:#636466;">${parcelaFmt}</span>
       <span style="text-align:right;">${link}</span>
@@ -426,6 +435,7 @@ let casaModalEss=true, casaEditIdx=null;
 function fillCasaModal(ess,item){
   casaModalEss=ess;
   document.getElementById('casaEss').value = ess?'ess':'nao';
+  document.getElementById('casaCat').value = (item&&item.cat)?item.cat:'Cozinha';
   document.getElementById('casaNome').value = item?item.nome:'';
   const parc = !!(item && item.parcela>0);
   document.getElementById('casaPag').value = parc?'parcelado':'avista';
@@ -448,6 +458,7 @@ function saveCasaModal(){
   const nome=(document.getElementById('casaNome').value||'').trim();
   if(!nome){ alert('Dê um nome ao item.'); return; }
   const ess = document.getElementById('casaEss').value==='ess';
+  const cat = document.getElementById('casaCat').value;
   const pag=document.getElementById('casaPag').value;
   const link=(document.getElementById('casaLink').value||'').trim();
   let valor=0,parcela=0,qtd=1;
@@ -458,7 +469,7 @@ function saveCasaModal(){
   } else {
     valor=parseNum(document.getElementById('casaValor').value); parcela=0; qtd=1;
   }
-  update(d=>{ if(!d.casa)d.casa=[]; if(casaEditIdx!=null && d.casa[casaEditIdx]){ d.casa[casaEditIdx]=Object.assign({},d.casa[casaEditIdx],{nome,valor,parcela,qtd,ess,link}); } else { d.casa.push({nome,valor,parcela,qtd,comprado:false,ess,link}); } });
+  update(d=>{ if(!d.casa)d.casa=[]; if(casaEditIdx!=null && d.casa[casaEditIdx]){ d.casa[casaEditIdx]=Object.assign({},d.casa[casaEditIdx],{nome,valor,parcela,qtd,ess,link,cat}); } else { d.casa.push({nome,valor,parcela,qtd,comprado:false,ess,link,cat}); } });
   closeCasaModal();
 }
 function delCasaItem(i){ if(!confirm('Remover este item da lista?')) return; update(d=>{ d.casa.splice(i,1); }); }
