@@ -137,6 +137,13 @@
       <button class="btnghost" onclick="closeMonthEdit()">Cancelar</button>
       <button class="btnprimary" onclick="saveMonthEdit()">Salvar</button>
     </div>
+    <div style="border-top:1px solid #eff0f2;margin-top:16px;padding-top:12px;">
+      <div style="font-size:11px;color:#8c8e90;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">Ajuste em massa (todos os meses)</div>
+      <div style="display:flex;gap:10px;">
+        <button class="btnghost" style="flex:1;" onclick="shiftAllMonths(-1)">◀ Recuar 1 mês</button>
+        <button class="btnghost" style="flex:1;" onclick="shiftAllMonths(1)">Avançar 1 mês ▶</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -546,6 +553,15 @@ function saveMonthEdit(){
   const newKey=y+'-'+String(mo+1).padStart(2,'0');
   const newLabel=MES[mo]+' '+y;
   update(d=>{ const m=d.months[S.sel]; const oldKey=m.key; m.label=newLabel; m.key=newKey; if(d.meta && d.meta[oldKey]!=null && oldKey!==newKey){ d.meta[newKey]=d.meta[oldKey]; delete d.meta[oldKey]; } });
+  closeMonthEdit();
+}
+function shiftAllMonths(delta){
+  if(!confirm('Deslocar TODOS os meses em '+(delta<0?'-':'+')+Math.abs(delta)+' mês? Os valores não mudam, só as datas.')) return;
+  const sh=(y,mo)=>{ mo+=delta; while(mo<1){mo+=12;y--;} while(mo>12){mo-=12;y++;} return [y,mo]; };
+  update(d=>{
+    d.months.forEach(m=>{ const p=(m.key||'2025-01').split('-'); let [y,mo]=sh(parseInt(p[0])||2025, parseInt(p[1])||1); m.key=y+'-'+String(mo).padStart(2,'0'); m.label=MES[mo-1]+' '+y; });
+    if(d.meta){ const nm={}; Object.keys(d.meta).forEach(k=>{ const p=k.split('-'); let [y,mo]=sh(parseInt(p[0])||2025, parseInt(p[1])||1); nm[y+'-'+String(mo).padStart(2,'0')]=d.meta[k]; }); d.meta=nm; }
+  });
   closeMonthEdit();
 }
 
