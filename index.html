@@ -125,6 +125,21 @@
   </div>
 </div>
 
+<div class="modalwrap" id="monthModal">
+  <div class="modal">
+    <h3 style="margin:0 0 12px;font-size:17px;font-weight:800;">Editar mês</h3>
+    <p style="font-size:13px;color:#636466;margin:0 0 12px;">Altera só o mês/ano deste registro. Os valores lançados não mudam.</p>
+    <label style="font-size:12px;font-weight:700;color:#8c8e90;text-transform:uppercase;letter-spacing:.04em;">Mês</label>
+    <select class="field" id="mesSel"><option value="0">Janeiro</option><option value="1">Fevereiro</option><option value="2">Março</option><option value="3">Abril</option><option value="4">Maio</option><option value="5">Junho</option><option value="6">Julho</option><option value="7">Agosto</option><option value="8">Setembro</option><option value="9">Outubro</option><option value="10">Novembro</option><option value="11">Dezembro</option></select>
+    <label style="font-size:12px;font-weight:700;color:#8c8e90;text-transform:uppercase;letter-spacing:.04em;display:block;margin-top:12px;">Ano</label>
+    <input class="field" id="anoInp" type="number" placeholder="2025">
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+      <button class="btnghost" onclick="closeMonthEdit()">Cancelar</button>
+      <button class="btnprimary" onclick="saveMonthEdit()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ============================================================
    FINANÇAS — app pessoal, arquivo único.
@@ -255,6 +270,7 @@ function render(){
             <div style="min-width:120px;text-align:center;font-weight:700;font-size:14px;color:#15274a;">${esc(m.label)}</div>
             <button class="circ" onclick="nextMonth()"><span class="ms" style="font-size:20px">chevron_right</span></button>
           </div>
+          <button class="circ" title="Editar mês" onclick="openMonthEdit()"><span class="ms" style="font-size:18px">edit_calendar</span></button>
           <button class="circ" title="Sincronização" onclick="openSync()"><span class="ms" style="font-size:19px;color:${dot}">cloud</span></button>
         </div>
       </header>
@@ -521,6 +537,16 @@ function delMonth(i){
   if(S.data.months.length<=1){ alert('Você precisa manter pelo menos um mês.'); return; }
   const mm=S.data.months[i]; if(!confirm('Excluir o mês "'+mm.label+'"? Esta ação não pode ser desfeita.')) return;
   update(d=>{ d.months.splice(i,1); if(d.meta && d.meta[mm.key]) delete d.meta[mm.key]; });
+}
+function openMonthEdit(){ const m=S.data.months[S.sel]; const p=(m.key||'2025-01').split('-'); const y=parseInt(p[0])||2025, mo=parseInt(p[1])||1; document.getElementById('mesSel').value=String(mo-1); document.getElementById('anoInp').value=y; document.getElementById('monthModal').style.display='flex'; }
+function closeMonthEdit(){ document.getElementById('monthModal').style.display='none'; }
+function saveMonthEdit(){
+  const mo=parseInt(document.getElementById('mesSel').value)||0;
+  const y=parseInt(document.getElementById('anoInp').value)||2025;
+  const newKey=y+'-'+String(mo+1).padStart(2,'0');
+  const newLabel=MES[mo]+' '+y;
+  update(d=>{ const m=d.months[S.sel]; const oldKey=m.key; m.label=newLabel; m.key=newKey; if(d.meta && d.meta[oldKey]!=null && oldKey!==newKey){ d.meta[newKey]=d.meta[oldKey]; delete d.meta[oldKey]; } });
+  closeMonthEdit();
 }
 
 /* ============================================================
